@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>乌兹别克语阅读练习 (O'zbek Tili)</title>
+    <title>乌兹别克语阅读 (O'zbek Tili)</title>
     
     <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -16,56 +16,529 @@
     <script src="https://cdn.tailwindcss.com"></script>
 
     <style>
-        /* Custom Scrollbar for nicer look */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1; 
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1; 
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8; 
-        }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .word-hover:hover { background-color: rgba(255, 255, 0, 0.2); border-radius: 4px; }
+        
+        /* Cursor style for interactive/non-interactive words */
+        .cursor-pointer { cursor: pointer; }
+        .cursor-default { cursor: default; }
     </style>
 </head>
 <body class="bg-gray-200">
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+        const { useState, useEffect, useRef, useMemo } = React;
 
-        // --- Icons (Implemented as SVG components to avoid external dependencies) ---
-        const Play = ({ size = 24, className = "" }) => (
-            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-        );
-        const Pause = ({ size = 24, className = "" }) => (
-            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
-        );
-        const BookOpen = ({ size = 24, className = "" }) => (
-            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
-        );
-        const Volume2 = ({ size = 24, className = "" }) => (
-            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
-        );
-        const Globe = ({ size = 24, className = "" }) => (
-            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
-        );
-        const Menu = ({ size = 24, className = "" }) => (
-            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-        );
-        const Loader2 = ({ size = 24, className = "" }) => (
-            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>
-        );
-        const Settings = ({ size = 24, className = "" }) => (
-            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-        );
-        const X = ({ size = 24, className = "" }) => (
-            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-        );
+        // --- Icons ---
+        const Play = ({ size = 24, className = "" }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>;
+        const Pause = ({ size = 24, className = "" }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>;
+        const BookOpen = ({ size = 24, className = "" }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>;
+        const Volume2 = ({ size = 24, className = "" }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>;
+        const Globe = ({ size = 24, className = "" }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>;
+        const Menu = ({ size = 24, className = "" }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>;
+        const Loader2 = ({ size = 24, className = "" }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>;
+        const Settings = ({ size = 24, className = "" }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>;
+        const X = ({ size = 24, className = "" }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
+        const Eye = ({ size = 24, className = "" }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>;
+        const EyeOff = ({ size = 24, className = "" }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>;
+
+        // --- Vocabulary Dictionary ---
+        const dictionary = {
+            // Lesson 7 Strict Vocab
+            "qahva": "咖啡", "qiz": "女孩; 女儿", "qush": "鸟", "qish": "冬天", "qor": "雪",
+            "chiroq": "灯", "bog'": "公园; 花园", "tog'": "山", "g'oz": "鹅", "muzey": "博物馆",
+            "o'g'il": "男孩; 儿子", "tog'a": "舅舅", "singil": "妹妹", "ko'ngil": "心灵", "dengiz": "大海",
+            "jang": "战争", "a'lo": "优秀的", "ma'no": "意思, 意义", "va'da": "承诺, 诺言", "san'at": "艺术",
+            "sur'at": "速度", "she'r": "诗", "e'tibor": "注意力", "ta'sir": "影响", "jur'at": "勇气",
+            "teatr": "剧院", "dorixona": "药店", "shifoxona": "医院", "darsxona": "教室", "o'qituvchi": "教师",
+            "o'quvchi": "学生", "parta": "课桌", "lug'at": "字典", "deraza": "窗户", "dars": "课",
+            "qalam": "铅笔", "amaki": "叔, 伯", "oilaviy": "家庭的", "chiroyli": "美丽的",
+
+            // Lesson 8 Strict Vocab
+            "yaqin": "近的", "dugona": "女性朋友", "choy": "茶", "tilak": "祝愿, 愿望", "qishloq": "农村",
+            "xalq": "人民", "o'rin": "位置", "qorin": "肚子", "bo'yin": "脖子", "bo'g'iz": "喉",
+            "og'iz": "嘴", "burun": "鼻子", "qo'shiq": "歌曲", "zavod": "工厂", "tarjimon": "翻译",
+            "olim": "科学家; 学者", "boshliq": "领导", "xitoylik": "中国人", "qayer": "哪儿, 哪里",
+            "qayerlik": "哪里人", "ajoyib": "令人惊异的; 有趣的", "o'zbek": "乌兹别克人", "tojik": "塔吉克人",
+            "koreys": "韩国人, 朝鲜族", "arman": "亚美尼亚人", "rus": "俄罗斯人", "tatar": "塔塔尔人",
+
+            // Lesson 9 Strict Vocab
+            "yashamoq": "生活/居住", "yasha": "生活/居住", "yashay": "生活/居住", 
+            "o'qimoq": "读/学习", "o'qi": "读/学习", "o'qiy": "读/学习",
+            "yozmoq": "写", "yoz": "写",
+            "ketmoq": "走, 离开", "ket": "走, 离开",
+            "tinglamoq": "听", "tingla": "听", "tinglay": "听",
+            "uxlamoq": "睡", "uxla": "睡",
+            "ishlamoq": "工作", "ishla": "工作",
+            "shug'ullanmoq": "从事", "shug'ullan": "从事",
+            "tayyorlamoq": "准备", "tayyorla": "准备",
+            "kechqurun": "晚上",
+            "dam olmoq": "休息", "dam": "休息", "olmoq": "拿/取 (在dam olmoq中为休息)", "ol": "拿/取",
+            "musiqa": "音乐",
+            "sport": "体育",
+            "bilan": "跟......; 和",
+            "birga": "一起",
+            "kelmoq": "来", "kel": "来",
+            "ovqat": "饭",
+            "keng": "宽",
+            "bambuk": "竹子",
+            "davlat": "国家",
+            "kutubxona": "图书馆",
+            "kinoteatr": "电影院",
+            "supermarket": "超市",
+            "do'stlik": "友谊",
+            "restoran": "饭店",
+            "shu": "这, 此",
+            "joylashgan": "坐落于",
+            "kunduzi": "白天",
+            "turli xil": "各种各样", "turli": "各种", "xil": "种类/样",
+            "yonmoq": "亮", "yon": "亮", "yona": "亮",
+            "shunda": "这样一来",
+            "bo'lmoq": "是; 成为", "bo'l": "是; 成为", "bo'la": "是; 成为",
+            "yaxshi ko'rmoq": "喜欢", "yaxshi": "好 (yaxshi ko'rmoq: 喜欢)", "ko'rmoq": "看 (yaxshi ko'rmoq: 喜欢)", "ko'r": "看",
+            "kam": "少",
+
+            // Lesson 10 Strict Vocab
+            "kechirasiz": "请原谅", "gapirmoq": "说", "gapir": "说", "gapira": "说",
+            "til": "语言", "bir oz": "一些; 稍微", "bir": "一", "oz": "少",
+            "qiyin": "难的", "uchun": "为了", "allo": "喂!",
+            "eshitmoq": "听", "eshit": "听",
+            "mumkin": "可能", "so'ramoq": "问", "so'ra": "问",
+            "chaqirmoq": "叫; 邀请", "chaqir": "叫; 邀请", "xo'p": "是, 好的",
+            "rahmat": "谢谢", "mayli": "好吧, 就这样", "kechroq": "晚些",
+            "qo'ng'iroq": "电话; 铃", 
+            "dam olish xonasi": "休息室", 
+            "televizor": "电视", "ko'rmoq": "看", "ko'r": "看",
+            "hamma": "所有; 大家", "yotoqxona": "宿舍",
+            "suzmoq": "游泳", "suz": "游泳",
+            "suhbatlashmoq": "交谈", "suhbatlash": "交谈",
+            "gitara": "吉他", "chalmoq": "弹奏", "chal": "弹奏",
+            "ichmoq": "喝", "ich": "喝",
+            "qaysi": "哪个", "tushlik qilmoq": "吃午饭", "tushlik": "午餐",
+            "radio": "收音机", "qo'shni": "邻居",
+            "o'tqazmoq": "种", "o'tqaz": "种",
+            "futbol": "足球", "o'ynamoq": "玩", "o'yna": "玩",
+            "ochiq": "打开的; 晴朗的",
+            "maza qilmoq": "享受, 享用", "maza": "味道",
+            "behad": "无比", "lekin": "但是",
+            "yuvmoq": "洗", "yuv": "洗",
+            "vannaxona": "浴室", "bermoq": "给", "ber": "给",
+            "oqlamoq": "刷白", "oqla": "刷白",
+            "sabzavot": "蔬菜", "bilmoq": "知道", "bil": "知道",
+            "qidirmoq": "找", "qidir": "找",
+            "shokolad": "巧克力", "taklif qilmoq": "邀请", "taklif": "邀请",
+            "tanimoq": "认识", "tani": "认识",
+
+            // Lesson 11 Strict Vocab
+            "markaziy": "中央的, 中心的", "millat": "民族", "yer": "土地; 地方", "yoqmoq": "喜欢, 合意", "yoqadi": "喜欢 (第三人称)",
+            "albatta": "当然", "bormoq": "去", "bor": "去/有", "zamonaviy": "现代的",
+            "xonanda": "歌手", "ko'proq": "更多", "sevib": "喜爱地", "eshik": "门", "qoshiq": "勺",
+            "pochta": "邮局", "yil": "年", "mehmon": "客人", "kech qolmoq": "迟到", "kech": "晚", "qolmoq": "留下/迟到",
+            "bekat": "站", "fabrika": "工厂", "sovg'a": "礼物", "kelgan": "来的",
+            "tez-tez": "常常; 快速地", "kichik": "小的", "keyin": "......之后; 以后",
+            "nol": "零", "ikki": "二", "to'rt": "四", "besh": "五", "olti": "六", "yetti": "七", "sakkiz": "八",
+            "to'qqiz": "九", "o'n": "十", "yigirma": "二十", "o'ttiz": "三十", "qirq": "四十", "ellik": "五十",
+            "oltmish": "六十", "yetmish": "七十", "sakson": "八十", "to'qson": "九十", "yuz": "百",
+            "ming": "千", "million": "百万", "milliard": "十亿", "to'p": "球",
+            "necha": "多少", "yosh": "岁; 年轻的", "kirmoq": "进", "kir": "进", "endi": "现在, 目前",
+            "kishi": "人", "iborat": "由......组成", "doim": "经常", "baxt": "幸福", "to'la": "充满......的",
+            "dehqonchilik": "农业", "vaqt": "时间", "dala": "田地", "mehribon": "慈祥, 慈爱",
+            "aqlli": "聪明的", "uzoq": "远的, 久的", "sog'inmoq": "思念, 想念", "sog'in": "思念",
+            "yozgi": "夏季的", "ta'til": "假期", "a'zo": "成员", "dehqon": "农民",
+
+            // Lesson 12 Strict Vocab
+            "soat": "表; 小时", "bo'ldi": "是 (bo'lmoq的过去时)", "bo'l": "是; 成为",
+            "majlis": "会议", "boshlanmoq": "开始", "boshlan": "开始",
+            "bino": "楼房", "qavat": "楼层", "arzimaydi": "不客气",
+            "tush": "中午", "qiziqarli": "有趣的", "kurs": "(大学的) 年级",
+            "mart": "三月", "roppa-rosa": "整", "yarim": "半", "chorak": "刻",
+            "o'tdi": "过了", "o't": "过",
+            "daqiqa": "分钟", "soniya": "秒", "kino": "电影",
+            "qachon": "什么时候", "qaytmoq": "回, 返", "qayt": "回, 返",
+            "yuvinmoq": "洗澡", "yuvin": "洗澡",
+            "kiyinmoq": "穿, 戴", "kiyin": "穿, 戴",
+            "tayyorlanmoq": "准备", "tayyorlan": "准备",
+            "ertalab": "早上", "fevral": "二月", "oy": "月亮; 月份",
+            "old": "前", "yig'ilmoq": "聚集, 集合", "yig'il": "聚集, 集合",
+            "tong": "黎明, 清晨", "uyg'onmoq": "醒", "uyg'on": "醒",
+            "nonushta": "早餐", "mashq": "练习; 锻炼",
+            "tarjima qilmoq": "翻译", "tarjima": "翻译", "tanaffus": "课间", "ba'zan": "有时", "davom etmoq": "继续", 
+            "davom": "继续", "tugamoq": "结束", "tuga": "结束", "kechki": "晚上的", "payt": "时刻, 时候", "mustaqil": "独立的", 
+            "bo'sh": "空的, 闲的", "charchamoq": "累, 疲劳", "charcha": "累, 疲劳", "yotmoq": "躺", "yot": "躺",
+
+            // Lesson 13 Strict Vocab
+            "tug'ilmoq": "出生", "tug'il": "出生",
+            "aprel": "四月", "may": "五月", "iyun": "六月", "iyul": "七月", "avgust": "八月",
+            "sentyabr": "九月", "oktyabr": "十月", "noyabr": "十一月", "dekabr": "十二月",
+            "sana": "日期",
+            "raqsga tushmoq": "跳舞", "raqs": "舞", "tushmoq": "下/落/跳",
+            "mashhur": "有名的; 著名的",
+            "tashkil etilmoq": "成立", "tashkil": "组织", "etilmoq": "被做",
+            "fakultet": "系", "mavjud": "存在", "chet": "外边的; 外国的",
+            "o'quv": "学习", "toza": "干净的", "qulay": "方便的",
+            "xuddi": "如……一般; 像", "o'xshamoq": "像", "o'xsha": "像", "o'xshaydi": "像",
+            "o'smoq": "生长, 成长", "o's": "生长",
+            "markaz": "中心", "atrof": "周围", "narsa": "东西",
+            "qarshi": "对面", "o'ng": "右", "tomon": "边; 面", "chap": "左",
+            "dushanba": "星期一", "shuning uchun": "所以",
+            "shovqin-suronli": "喧哗吵闹的", "kutmoq": "等", "kut": "等",
+            "ko'pchilik": "多数人; 大家", "savdo-sotiq": "买卖", "ich": "里, 内",
+            "nima uchun": "为什么",
+            "konfet": "糖", "kilo": "公斤", "so'm": "苏姆 (货币)",
+            "marhamat": "请; 不客气", "kerak": "需要", "dona": "个",
+            "qancha": "多少", "yaxshi qoling": "保重!", "qalaysan": "你好吗?",
+            "xudoga shukur": "感谢真主!", "shukur": "感谢",
+            "tug'ilgan kun": "生日", "tug'ilgan": "出生的", "kun": "天/日",
+            "sariq": "黄", "menimcha": "我认为", "qizil": "红",
+            "rang": "颜色", "urf": "流行", "yashil": "绿",
+            "shunday": "这样", "unda": "那样一来", "semiz": "胖的, 肥的",
+            "shirin": "甜的", "issiq": "热的", "boy": "富有的",
+            "baland": "高的; 大的", "arzon": "便宜", "sovuq": "冷的",
+            "yomon": "不好的", "qisqa": "短的", "eski": "旧的, 老的",
+            "kelin": "媳妇; 新娘", "novcha": "高的", "yigit": "小伙子, 年轻人",
+            "ozg'in": "瘦的", "tor": "窄的", "samimiy": "亲切的",
+            "hikoya": "故事", "oson": "简单的, 容易的", "kambag'al": "穷的",
+            "qimmat": "贵的", "ahmoq": "傻的, 笨的", "yanvar": "一月",
+
+            // Lesson 14 Strict Vocab
+            "hafta": "星期", "nom": "名称", "seshanba": "星期二", "chorshanba": "星期三", "payshanba": "星期四", 
+            "juma": "星期五", "shanba": "星期六", "yakshanba": "星期日", 
+            "nima bo'ldi": "怎么了？", "kech": "晚", "turmoq": "起来, 起床", "tur": "起来", 
+            "ulgurmoq": "赶上", "ulgur": "赶上", "nega": "为什么", "kimdir": "某人; 不知何人", 
+            "o'g'irlab ketmoq": "偷走", "o'g'irlab": "偷走", "xafa": "生气, 不开心", 
+            "chiqmoq": "出; 上 (车等)", "chiq": "出", "tushmoq": "下", "tush": "下", 
+            "palov": "抓饭", "yemoq": "吃", "ye": "吃", "vazifa": "任务; 作业", 
+            "pishirmoq": "煮, 烹, 炒", "pishir": "煮, 烹, 炒", "tuzatmoq": "修理, 修正", "tuzat": "修理, 修正", 
+            "o'tgan": "上一个, 之前的", "ust": "上, 顶", "qo'ymoq": "放", "qo'y": "放", 
+            "yurmoq": "走", "yur": "走", "piyoda": "步行", "chindan": "说真的", "barvaqt": "提前", 
+            "o'z": "自己", "jahl chiqmoq": "生气", "jahl": "生气", "koyimoq": "训斥", "koyi": "训斥", 
+            "bechora": "没办法的; 可怜的", "harakat qilmoq": "努力", "harakat": "努力", 
+            "ammo": "但是", "baribir": "仍然, 反正; 无所谓",
+
+            // Lesson 15 Strict Vocab
+            "qiziqmoq": "感兴趣", "tur": "种类", "xokkey": "冰球", "bilyard": "台球", "ilgari": "之前, 从前", 
+            "futbolchi": "足球运动员", "zo'r": "巨大的, 有力的", "muxlislik qilmoq": "崇拜", "muxlislik": "崇拜",
+            "joy": "地方", "jamoa": "组织, 联盟", "muvaffaqiyat": "成功", "har holda": "至少", 
+            "bo'sh kelmoq": "示弱", "bo'sh": "空的 (bo'sh kelmoq: 示弱)", "litsey": "高中", "taniqli": "闻名的", 
+            "sportchi": "运动员", "uchrashuv": "会面", "e'lon": "广告, 宣传", "aytilishcha": "据说", 
+            "boshqa": "其他; 除……之外", "yoqtirmoq": "喜欢", "kurash": "摔跤", "kuchli": "有力量的", 
+            "irodali": "有毅力的", "polvon": "勇士; 英雄", "tanish": "熟人, 认识人", "plyaj": "沙滩", 
+            "ofis": "办公室", "oshpaz": "厨师", "chaqaloq": "婴儿", "tinch": "安静", "notinch": "吵闹", 
+            "etik": "靴子", "ob-havo": "天气", "bilimli": "有知识的", "hurmat qilmoq": "尊重, 尊敬", 
+            "hurmat": "尊重", "yugurmoq": "跑", "yugur": "跑", "sog'lom": "健康的", "ilk": "最初的; 原始的", 
+            "muhabbat": "爱情", "unutmoq": "忘记", "unut": "忘记", "poyabzal": "鞋", 
+            "ko'chib kelmoq": "搬来", "ko'chib": "搬来", "oldin": "之前; 首先", "gaplashmoq": "交谈", 
+            "gaplash": "交谈", "kompyuter": "电脑", "kotiba": "秘书", "kelajak": "未来", "umid": "希望", 
+            "qaramoq": "看", "qara": "看", "tilamoq": "祝愿, 祈祷", "basketbol": "篮球", 
+            "voleybol": "排球", "tennis": "网球", "baxtiyor": "幸福的; 高兴的",
+
+            // Lesson 16 Strict Vocab
+            "biror": "某个", "xarid qilmoq": "购买, 消费", "xarid": "购买", "sotib olmoq": "买", 
+            "sotib": "买", "dam olish kuni": "休息日", "kasalxona": "医院", "davolanmoq": "治疗", 
+            "davolan": "治疗", "kursdosh": "(大学) 同学", "uchrashmoq": "相见, 会面", 
+            "uchrash": "相见", "saroy": "宫殿", "yon": "旁边", "bir qancha": "一些", 
+            "maslahat": "建议", "xos": "特有的", "sokin": "安静的, 宁静的", "ozoda": "干净的, 整洁的", 
+            "salqin": "凉爽的", "xushmanzara": "美丽如画的", "ko'l": "湖", "qayiq": "小船", 
+            "sayr qilmoq": "游览, 参观", "sayr": "游览", "shirkat": "公司", "so'ng": "……之后", 
+            "xususiy": "私人的", "haydamoq": "驾驶; 驱赶", "hayda": "驾驶", "yomg'ir": "雨", 
+            "yog'moq": "下 (雨、雪)", "yog'": "下", "bulutli": "多云的, 阴的", "ora": "距离", 
+            "demak": "那么,可见,就是说", "harf": "字母", "tovush": "发音", "xullas": "总之", 
+            "yozuv": "文字", "ahamiyat": "意义", "avlod": "后代", "orqali": "通过……", 
+            "madaniy": "文化的, 文明的", "meros": "遗产", "sog'": "健康的", "lozim": "必要, 应当", 
+            "paydo bo'lmoq": "出现", "paydo": "出现", "savol": "问题", "javob": "回答", 
+            "tomosha qilmoq": "欣赏, 观赏", "tomosha": "欣赏", "tanishmoq": "相识; 了解, 熟悉", 
+            "tanish": "相识", "madaniyat": "文化, 文明", "haqida": "关于, 有关", "ma'lumot": "知识, 信息", 
+            "kundan-kunga": "日渐", "ba'zi": "有些", "qiyinchilik": "困难", "yordam": "帮助", 
+            "agar": "假如", "biron-bir": "某个", "natija": "结果; 成绩", "erishmoq": "取得, 获得", 
+            "erish": "取得",
+
+            // Lesson 17 Strict Vocab
+            "xorijiy": "外国的", "pul topmoq": "挣钱", "pul": "钱", "qarang": "请看", 
+            "poytaxt": "首都", "ochilish marosimi": "开幕式", "ochilish": "开幕", "marosim": "仪式",
+            "o'tmoq": "过", "bayram": "节日", "muvaffaqiyatli": "成功的", "o'yingoh": "运动场地", 
+            "qurilmoq": "被建造", "yo'l": "路", "barpo etilmoq": "被创建", "barpo": "创建", 
+            "hashamatli": "宏伟的", "uya": "巢", "chiroy": "面貌", "butun": "整个, 全部", 
+            "dunyo": "世界", "kub": "立方", "o'tkazilgan": "被举办的", "o'tkazilmoq": "被举办", 
+            "musobaqa": "比赛", "barcha": "一切, 所有", "tomoshabin": "观众", "taassurot": "印象", 
+            "qoldirmoq": "使留下", "ko'plab": "许多, 很多", "me'morchilik": "建筑艺术", 
+            "inshoot": "建筑物, 设施", "ko'rk": "美貌, 精致", "qo'shmoq": "增加, 添加", 
+            "shior": "口号", "qalb": "内心", "eng": "最", "ezgu": "良好的, 吉利的", 
+            "omadli": "幸运的", "hissa": "部分; 贡献", "volontyor": "志愿者", "sifatida": "作为……", 
+            "ishtirok etmoq": "参加", "ishtirok": "参加", "imkoniyat": "机会", "orttirmoq": "使增多", 
+            "inson": "人", "muloqot qilmoq": "会面; 接触", "muloqot": "会面", "marta": "次", 
+            "deyishmoq": "说 (demoq的参与态)", "deyish": "说", "to'g'ri": "正确的; 笔直的", 
+            "qadimiy": "古老的", "ayniqsa": "尤其是", "maydon": "广场, 场地", "ertak": "童话", 
+            "orzu qilmoq": "希望, 盼望", "orzu": "希望", "bitirmoq": "把……完成", "kirish": "进 (kirmoq的动名词)", 
+            "xohlamoq": "想, 希望", "korxona": "公司, 企业", "milliy": "民族的; 国家的", 
+            "shaharcha": "小城", "oliy": "高级的", "yurt": "祖国; 故乡; 地方", "kollej": "学院; 中专", 
+            "ega": "具有, 拥有", "o'rta": "中间; 中等的", "osiyo": "亚洲", "o'qish": "学习 (o'qimoq的动名词)", 
+            "tanishtirmoq": "介绍, 使认识", "jon": "生命", "ko'rsatmoq": "让……看; 展示", 
+            "quyoshli": "有阳光的; 晴朗的", "eslamoq": "想念; 回忆", "telefon": "电话", 
+            "uylanmoq": "娶妻", "turmushga chiqmoq": "嫁人", "turmushga": "生活 (向格)", "chiqmoq": "出",
+
+            // Lesson 18 Strict Vocab (New)
+            "chinnigul": "丁香花", "atirgul": "玫瑰花", "ma'qul": "适宜的, 可行的", "pushti": "粉色", 
+            "oq": "白色", "iltimos": "请, 请求", "guldasta": "花束", "biroq": "但是, 然而", 
+            "dilkash": "迷人的, 美好的", "kafe": "咖啡馆, 餐厅", "devzira": "大米的一个优质品种名", 
+            "o'rmon": "森林", "hatto": "甚至", "tatimoq": "品尝", "tati": "品尝", "solmoq": "放", 
+            "sol": "放", "o'tirmoq": "坐", "o'tir": "坐", "aytmoq": "讲, 说; 唱", "ayt": "讲", 
+            "ancha": "很, 相当", "beri": "……以来", "topmoq": "找", "top": "找", "qator": "排, 列", 
+            "insho": "作文, 文章", "muborak bo'lsin": "恭喜, 恭贺", "o'rtoq": "朋友, 伙伴", 
+            "imtihon": "考试", "ovoz": "声音", "kuylamoq": "歌唱, 歌颂", "kuyla": "歌唱", 
+            "madhiya": "国歌", "takrorlamoq": "重复", "takrorla": "重复", "tushuntirmoq": "讲解", 
+            "tushuntir": "讲解", "uzatmoq": "伸, 递", "uzat": "伸", "chekmoq": "吸烟", "chek": "吸烟", 
+            "to'xtamoq": "停", "to'xta": "停", "yopmoq": "关", "yop": "关", "shoshmoq": "着急", 
+            "shosh": "着急", "xalaqit": "打搅, 妨碍", "salomat": "健康的", "xudo": "真主, 胡达", 
+            "yor": "友人; 爱人", "auditoriya": "教室", "yig'lamoq": "哭", "yig'la": "哭", "bilim": "知识", 
+            "baqirmoq": "喊", "baqir": "喊", "mag'lub bo'lmoq": "失败, 输", "qo'shin": "军队", 
+            "uzun": "长", "asar": "作品", "savdogar": "商人; 小贩", "his qilmoq": "感觉, 感受", 
+            "his": "感觉", "ariza": "申请", "tanlamoq": "挑选, 选择", "tanla": "挑选", "hali": "还, 尚", 
+            "firma": "公司", "yoz": "夏天", "kuz": "秋天", "o'zicha": "按照自己的; 独有的", 
+            "go'zal": "美丽的", "kuzatmoq": "送别; 观察", "kuzat": "送别", "o'lka": "地方, 地区", 
+            "go'zallik": "美丽", "yoshlik": "青春", "tabiat": "自然", "kayfiyat": "情绪, 心情", 
+            "quyosh": "太阳, 阳光", "iliq": "温暖的", "nur": "光", "kabi": "和……相似, 好像; 等等", 
+            "yoqimli": "舒适的", "qishki": "冬天的, 冬季的", "uyqu": "睡眠", "erimoq": "融化", 
+            "eri": "融化", "gullamoq": "开花", "gulla": "开花", "yengil": "轻便的, 轻松的", 
+            "xo'jalik": "生产部门; 业", "shodlik": "喜悦, 快乐", "zerikmoq": "厌倦, 厌烦", "zerik": "厌倦", 
+            "qutulmoq": "摆脱", "qutul": "摆脱", "ochilmoq": "开 (花); 被打开", "ochil": "开", 
+            "ortiq": "更多的; 多余的", "o'zgarish": "变化", "sabab": "原因", "bahor": "春天",
+
+            // General/Other Lessons Vocab
+            "men": "我", "sen": "你", "u": "他/她/它", "biz": "我们", "siz": "您/你们", "ular": "他们",
+            "bu": "这", "shu": "这", "o'sha": "那", "kim": "谁",
+            "oila": "家庭", "ota": "父亲", "ona": "母亲", "opa": "姐姐", "aka": "哥哥", "uka": "弟弟",
+            "rasm": "照片", "ism": "名字", "talaba": "大学生", 
+            "sinf": "班级/教室", 
+            "yashamoq": "生活/居住", "ko'cha": "街道", "katta": "大", "kichik": "小", 
+            "havo": "天气", "tozalamoq": "打扫", "yuvmoq": "洗", "bermoq": "给",
+            "kishi": "人", "baxt": "幸福", "dala": "田野", "vaqt": "时间", "aqlli": "聪明",
+            "uzoq": "远", "sog'inmoq": "想念",
+            "soat": "小时/点钟", "turmoq": "站立/起床", "uyg'onmoq": "醒来", "nonushta": "早餐", "tushlik": "午餐",
+            "kechki": "晚上的", "charchamoq": "累",
+            "shahar": "城市", "mashhur": "著名", "til": "语言", "fakultet": "学院", "bino": "大楼",
+            "kech": "晚", "qolmoq": "留下/迟到", "mashina": "汽车", "avtobus": "公交车", "piyoda": "步行",
+            "tug'ilmoq": "出生", "kompyuter": "电脑", "do'st": "朋友",
+            "tarix": "历史", "madaniyat": "文化", "kino": "电影", 
+            "olimpiada": "奥运会", "poytaxt": "首都", "bayram": "节日", "muvaffaqiyatli": "成功", "stadion": "体育场",
+            "dunyo": "世界",
+            "fasl": "季节", "sovuq": "冷", "issiq": "热", "yomg'ir": "雨", "sayr": "散步/游览", "tez": "快"
+        };
+
+        // Lesson 7 Strict Vocabulary Set
+        const lesson7StrictSet = new Set([
+            "qahva", "qiz", "qush", "qish", "qor", "chiroq", "bog'", "tog'", "g'oz", "muzey", 
+            "o'g'il", "tog'a", "singil", "ko'ngil", "dengiz", "jang", "a'lo", "ma'no", "va'da", 
+            "san'at", "sur'at", "she'r", "e'tibor", "ta'sir", "jur'at", "teatr", "dorixona", 
+            "shifoxona", "darsxona", "o'qituvchi", "o'quvchi", "parta", "lug'at", "deraza", 
+            "dars", "qalam", "amaki", "oilaviy", "chiroyli"
+        ]);
+
+        // Lesson 8 Strict Vocabulary Set
+        const lesson8StrictSet = new Set([
+            "yaqin", "dugona", "choy", "tilak", "qishloq", "xalq", "o'rin", "qorin", "bo'yin", 
+            "bo'g'iz", "og'iz", "burun", "qo'shiq", "zavod", "tarjimon", "olim", "boshliq", 
+            "xitoylik", "qayer", "qayerlik", "ajoyib", "o'zbek", "tojik", "koreys", "arman", 
+            "rus", "tatar"
+        ]);
+
+        // Lesson 9 Strict Vocabulary Set
+        const lesson9StrictSet = new Set([
+            "yashamoq", "yasha", "yashay", "o'qimoq", "o'qi", "o'qiy", "yozmoq", "yoz", 
+            "ketmoq", "ket", "tinglamoq", "tingla", "tinglay", "uxlamoq", "uxla", "ishlamoq", "ishla",
+            "shug'ullanmoq", "shug'ullan", "tayyorlamoq", "tayyorla", "kechqurun", 
+            "dam olmoq", "dam", "olmoq", "ol", "musiqa", "sport", "bilan", "birga", 
+            "kelmoq", "kel", "ovqat", "keng", "bambuk", "davlat", "kutubxona", "kinoteatr", 
+            "supermarket", "do'stlik", "restoran", "shu", "joylashgan", "kunduzi", 
+            "turli xil", "turli", "xil", "yonmoq", "yon", "yona", "shunda", 
+            "bo'lmoq", "bo'l", "bo'la", "yaxshi ko'rmoq", "yaxshi", "ko'rmoq", "ko'r", "kam"
+        ]);
+
+        // Lesson 10 Strict Vocabulary Set
+        const lesson10StrictSet = new Set([
+            "kechirasiz", "gapirmoq", "gapir", "gapira", "til", "bir oz", "bir", "oz", "qiyin", 
+            "uchun", "allo", "eshitmoq", "eshit", "mumkin", "so'ramoq", "so'ra", 
+            "chaqirmoq", "chaqir", "xo'p", "rahmat", "mayli", "kechroq", "qo'ng'iroq", 
+            "dam olish xonasi", "dam", "olish", "xonasi", "televizor", "ko'rmoq", "ko'r", 
+            "hamma", "yotoqxona", "suzmoq", "suz", "suhbatlashmoq", "suhbatlash", 
+            "gitara", "chalmoq", "chal", "ichmoq", "ich", "qaysi", "tushlik qilmoq", "tushlik", 
+            "radio", "qo'shni", "o'tqazmoq", "o'tqaz", "futbol", "o'ynamoq", "o'yna", 
+            "ochiq", "maza qilmoq", "maza", "behad", "lekin", "yuvmoq", "yuv", 
+            "vannaxona", "bermoq", "ber", "oqlamoq", "oqla", "sabzavot", "bilmoq", "bil", 
+            "qidirmoq", "qidir", "bozor", "shokolad", "taklif qilmoq", "taklif", 
+            "tanimoq", "tani", "tozalamoq", "tozala", "o'rganmoq", "o'rgan"
+        ]);
+
+        // Lesson 11 Strict Vocabulary Set
+        const lesson11StrictSet = new Set([
+            "markaziy", "millat", "yer", "yoqmoq", "yoqadi", "albatta", "bormoq", "bor", "zamonaviy", "xonanda",
+            "ko'proq", "sevib", "eshik", "qoshiq", "pochta", "yil", "mehmon", "kech qolmoq", "kech", "qolmoq",
+            "bekat", "fabrika", "sovg'a", "kelgan", "tez-tez", "kichik", "keyin", "nol", "ikki", "to'rt", "besh",
+            "olti", "yetti", "sakkiz", "to'qqiz", "o'n", "yigirma", "o'ttiz", "qirq", "ellik", "oltmish",
+            "yetmish", "sakson", "to'qson", "yuz", "ming", "million", "milliard", "to'p", "necha", "yosh",
+            "kirmoq", "kir", "endi", "kishi", "iborat", "doim", "baxt", "to'la", "dehqonchilik", "vaqt",
+            "dala", "mehribon", "aqlli", "uzoq", "sog'inmoq", "sog'in", "yozgi", "ta'til", "a'zo", "dehqon"
+        ]);
+
+        // Lesson 12 Strict Vocabulary Set
+        const lesson12StrictSet = new Set([
+            "soat", "bo'ldi", "bo'l", "majlis", "boshlanmoq", "boshlan", "bino", "qavat", 
+            "arzimaydi", "tush", "qiziqarli", "kurs", "mart", "roppa-rosa", "yarim", "chorak", 
+            "o'tdi", "o't", "daqiqa", "soniya", "kino", "qachon", "qaytmoq", "qayt", 
+            "yuvinmoq", "yuvin", "kiyinmoq", "kiyin", "tayyorlanmoq", "tayyorlan", "ertalab", 
+            "fevral", "oy", "old", "yig'ilmoq", "yig'il", "tong", "uyg'onmoq", "uyg'on", 
+            "nonushta", "mashq", "tarjima qilmoq", "tarjima", "tanaffus", "ba'zan", "davom etmoq", 
+            "davom", "tugamoq", "tuga", "kechki", "payt", "mustaqil", "bo'sh", "charchamoq", 
+            "charcha", "yotmoq", "yot"
+        ]);
+
+        // Lesson 13 Strict Vocabulary Set
+        const lesson13StrictSet = new Set([
+            "tug'ilmoq", "tug'il", "aprel", "may", "iyun", "iyul", "avgust", "sentyabr", "oktyabr", 
+            "noyabr", "dekabr", "sana", "raqsga tushmoq", "raqs", "tushmoq", "mashhur", 
+            "tashkil etilmoq", "tashkil", "etilmoq", "fakultet", "mavjud", "chet", "o'quv", "toza", 
+            "qulay", "xuddi", "o'xshamoq", "o'xsha", "o'xshaydi", "o'smoq", "o's", "markaz", "atrof", 
+            "narsa", "qarshi", "o'ng", "tomon", "chap", "dushanba", "shuning uchun", "shovqin-suronli", 
+            "kutmoq", "kut", "ko'pchilik", "savdo-sotiq", "ich", "nima uchun", "konfet", "kilo", "so'm", 
+            "marhamat", "kerak", "dona", "qancha", "yaxshi qoling", "qalaysan", "xudoga shukur", 
+            "shukur", "tug'ilgan kun", "tug'ilgan", "kun", "sariq", "menimcha", "qizil", "rang", "urf", 
+            "yashil", "shunday", "unda", "semiz", "shirin", "issiq", "boy", "baland", "arzon", "sovuq", 
+            "yomon", "qisqa", "eski", "kelin", "novcha", "yigit", "ozg'in", "tor", "samimiy", "hikoya", 
+            "oson", "kambag'al", "qimmat", "ahmoq", "yanvar"
+        ]);
+
+        // Lesson 14 Strict Vocabulary Set
+        const lesson14StrictSet = new Set([
+            "hafta", "nom", "seshanba", "chorshanba", "payshanba", "juma", "shanba", "yakshanba", 
+            "nima bo'ldi", "kech", "turmoq", "tur", "ulgurmoq", "ulgur", "nega", "kimdir", 
+            "o'g'irlab ketmoq", "o'g'irlab", "xafa", "chiqmoq", "chiq", "tushmoq", "tush", 
+            "palov", "yemoq", "ye", "vazifa", "pishirmoq", "pishir", "tuzatmoq", "tuzat", 
+            "o'tgan", "ust", "qo'ymoq", "qo'y", "yurmoq", "yur", "piyoda", "chindan", "barvaqt", 
+            "o'z", "jahl chiqmoq", "jahl", "koyimoq", "koyi", "bechora", "harakat qilmoq", "harakat", 
+            "ammo", "baribir"
+        ]);
+
+        // Lesson 15 Strict Vocabulary Set
+        const lesson15StrictSet = new Set([
+            "qiziqmoq", "tur", "xokkey", "bilyard", "ilgari", "futbolchi", "zo'r", "muxlislik qilmoq", 
+            "muxlislik", "joy", "jamoa", "muvaffaqiyat", "har holda", "bo'sh kelmoq", "bo'sh", 
+            "litsey", "taniqli", "sportchi", "uchrashuv", "e'lon", "aytilishcha", "boshqa", 
+            "yoqtirmoq", "kurash", "kuchli", "irodali", "polvon", "tanish", "plyaj", "ofis", 
+            "oshpaz", "chaqaloq", "tinch", "notinch", "etik", "ob-havo", "bilimli", "hurmat qilmoq", 
+            "hurmat", "yugurmoq", "yugur", "sog'lom", "ilk", "muhabbat", "unutmoq", "unut", 
+            "poyabzal", "ko'chib kelmoq", "ko'chib", "oldin", "gaplashmoq", "gaplash", "kompyuter", 
+            "kotiba", "kelajak", "umid", "qaramoq", "qara", "tilamoq", "basketbol", "voleybol", 
+            "tennis", "baxtiyor"
+        ]);
+
+        // Lesson 16 Strict Vocabulary Set
+        const lesson16StrictSet = new Set([
+            "biror", "xarid qilmoq", "xarid", "sotib olmoq", "sotib", "dam olish kuni", "kasalxona", 
+            "davolanmoq", "davolan", "kursdosh", "uchrashmoq", "uchrash", "saroy", "yon", "bir qancha", 
+            "maslahat", "xos", "sokin", "ozoda", "salqin", "xushmanzara", "ko'l", "qayiq", "sayr qilmoq", 
+            "sayr", "shirkat", "so'ng", "xususiy", "haydamoq", "hayda", "yomg'ir", "yog'moq", "yog'", 
+            "bulutli", "ora", "demak", "harf", "tovush", "xullas", "yozuv", "ahamiyat", "avlod", 
+            "orqali", "madaniy", "meros", "sog'", "lozim", "paydo bo'lmoq", "paydo", "savol", "javob", 
+            "tomosha qilmoq", "tomosha", "tanishmoq", "tanish", "madaniyat", "haqida", "ma'lumot", 
+            "kundan-kunga", "ba'zi", "qiyinchilik", "yordam", "agar", "biron-bir", "natija", 
+            "erishmoq", "erish"
+        ]);
+
+        // Lesson 17 Strict Vocabulary Set
+        const lesson17StrictSet = new Set([
+            "xorijiy", "pul topmoq", "pul", "qarang", "poytaxt", "ochilish marosimi", "ochilish", "marosim",
+            "o'tmoq", "bayram", "muvaffaqiyatli", "o'yingoh", "qurilmoq", "yo'l", "barpo etilmoq", "barpo",
+            "hashamatli", "uya", "chiroy", "butun", "dunyo", "kub", "o'tkazilgan", "o'tkazilmoq",
+            "musobaqa", "barcha", "tomoshabin", "taassurot", "qoldirmoq", "ko'plab", "me'morchilik",
+            "inshoot", "ko'rk", "qo'shmoq", "shior", "qalb", "eng", "ezgu", "omadli", "hissa", "volontyor",
+            "sifatida", "ishtirok etmoq", "ishtirok", "imkoniyat", "orttirmoq", "inson", "muloqot qilmoq",
+            "muloqot", "marta", "deyishmoq", "deyish", "to'g'ri", "qadimiy", "ayniqsa", "maydon", "ertak",
+            "orzu qilmoq", "orzu", "bitirmoq", "kirish", "xohlamoq", "korxona", "milliy", "shaharcha",
+            "oliy", "yurt", "kollej", "ega", "o'rta", "osiyo", "o'qish", "tanishtirmoq", "jon", "ko'rsatmoq",
+            "quyoshli", "eslamoq", "telefon", "uylanmoq", "turmushga chiqmoq", "turmushga", "chiqmoq"
+        ]);
+
+        // Lesson 18 Strict Vocabulary Set
+        const lesson18StrictSet = new Set([
+            "chinnigul", "atirgul", "ma'qul", "pushti", "oq", "iltimos", "guldasta", "biroq", "dilkash", 
+            "kafe", "devzira", "o'rmon", "hatto", "tatimoq", "tati", "solmoq", "sol", "o'tirmoq", "o'tir", 
+            "aytmoq", "ayt", "ancha", "beri", "topmoq", "top", "qator", "insho", "muborak bo'lsin", 
+            "o'rtoq", "imtihon", "ovoz", "kuylamoq", "kuyla", "madhiya", "takrorlamoq", "takrorla", 
+            "tushuntirmoq", "tushuntir", "uzatmoq", "uzat", "chekmoq", "chek", "to'xtamoq", "to'xta", 
+            "yopmoq", "yop", "shoshmoq", "shosh", "xalaqit", "salomat", "xudo", "yor", "auditoriya", 
+            "yig'lamoq", "yig'la", "bilim", "baqirmoq", "baqir", "mag'lub bo'lmoq", "qo'shin", "uzun", 
+            "asar", "savdogar", "his qilmoq", "his", "ariza", "tanlamoq", "tanla", "hali", "firma", 
+            "yoz", "kuz", "o'zicha", "go'zal", "kuzatmoq", "kuzat", "o'lka", "go'zallik", "yoshlik", 
+            "tabiat", "kayfiyat", "quyosh", "iliq", "nur", "kabi", "yoqimli", "qishki", "uyqu", 
+            "erimoq", "eri", "gullamoq", "gulla", "yengil", "xo'jalik", "shodlik", "zerikmoq", 
+            "zerik", "qutulmoq", "qutul", "ochilmoq", "ochil", "ortiq", "o'zgarish", "sabab", "bahor"
+        ]);
+
+        // Helper to clean words and find translations
+        const getTranslation = (rawWord, lessonId) => {
+            if (!rawWord) return null;
+            let clean = rawWord.toLowerCase().replace(/[.,!?;:()"]/g, '');
+            // Handle different apostrophes
+            clean = clean.replace(/['`’‘ʻ]/g, "'");
+
+            let translation = null;
+            let foundKey = null;
+
+            // Direct check
+            if (dictionary[clean]) {
+                translation = dictionary[clean];
+                foundKey = clean;
+            } else {
+                // Suffix stripping
+                const suffixes = [
+                    "ning", "ni", "ga", "da", "dan", "lar", "miz", "ngiz", "m", "ng", "si", "i", 
+                    "man", "san", "dir", "dik", "lik", "chi", 
+                    "di", "y", "a", "adi", "yap", "yapti", "moqda", "moqchi", "yapsiz", "yapman", "yapsan", "ymiz", "yman",
+                    "gan", "ib" // Past participle/adjective/gerund
+                ];
+                for (let suffix of suffixes) {
+                    if (clean.endsWith(suffix) && clean.length > suffix.length) {
+                        const stem = clean.slice(0, -suffix.length);
+                        if (dictionary[stem]) {
+                            translation = dictionary[stem];
+                            foundKey = stem;
+                            break;
+                        }
+                        for (let suffix2 of suffixes) {
+                            if (stem.endsWith(suffix2) && stem.length > suffix2.length) {
+                                const stem2 = stem.slice(0, -suffix2.length);
+                                if (dictionary[stem2]) {
+                                    translation = dictionary[stem2];
+                                    foundKey = stem2;
+                                    break;
+                                }
+                            }
+                        }
+                        if (translation) break;
+                    }
+                }
+            }
+
+            // Strict Mode Rules
+            if (lessonId === 7) return (foundKey && lesson7StrictSet.has(foundKey)) ? translation : null;
+            if (lessonId === 8) return (foundKey && lesson8StrictSet.has(foundKey)) ? translation : null;
+            if (lessonId === 9) return (foundKey && lesson9StrictSet.has(foundKey)) ? translation : null;
+            if (lessonId === 10) return (foundKey && lesson10StrictSet.has(foundKey)) ? translation : null;
+            if (lessonId === 11) return (foundKey && lesson11StrictSet.has(foundKey)) ? translation : null;
+            if (lessonId === 12) return (foundKey && lesson12StrictSet.has(foundKey)) ? translation : null;
+            if (lessonId === 13) return (foundKey && lesson13StrictSet.has(foundKey)) ? translation : null;
+            if (lessonId === 14) return (foundKey && lesson14StrictSet.has(foundKey)) ? translation : null;
+            if (lessonId === 15) return (foundKey && lesson15StrictSet.has(foundKey)) ? translation : null;
+            if (lessonId === 16) return (foundKey && lesson16StrictSet.has(foundKey)) ? translation : null;
+            if (lessonId === 17) return (foundKey && lesson17StrictSet.has(foundKey)) ? translation : null;
+            if (lessonId === 18) return (foundKey && lesson18StrictSet.has(foundKey)) ? translation : null;
+
+            // Other lessons: return found translation
+            return translation;
+        };
 
         // --- Data: Lessons 7-18 ---
         const lessons = [
@@ -399,9 +872,86 @@
             );
         };
 
+        // New Component: Interactive Sentence
+        // Breaks sentence into words and handles clicks
+        const InteractiveSentence = ({ text, isBlur, idx, speak, lessonId }) => {
+            const [selectedWord, setSelectedWord] = useState(null);
+            const timeoutRef = useRef(null);
+            
+            // Clean simple punctuation for display
+            // We keep punctuation in the span but the click target logic uses cleaned words
+            const words = useMemo(() => {
+                return text.split(' ').map((w, i) => ({
+                    raw: w,
+                    clean: w.replace(/[.,!?;:()"]/g, ''),
+                    id: `${idx}-${i}`
+                }));
+            }, [text, idx]);
+
+            const handleWordClick = (e, word) => {
+                e.stopPropagation(); // Stop sentence playback
+                const translation = getTranslation(word, lessonId);
+                
+                // Only show if translation exists (Strict mode for Lesson 7-18 handles this by returning null)
+                if (translation) {
+                    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+                    setSelectedWord({ word, translation, x: e.clientX, y: e.clientY });
+                    
+                    // Auto-hide after 1.5 seconds
+                    timeoutRef.current = setTimeout(() => {
+                        setSelectedWord(null);
+                    }, 1500);
+                }
+            };
+
+            // Close tooltip on click elsewhere
+            useEffect(() => {
+                const close = () => setSelectedWord(null);
+                window.addEventListener('click', close);
+                return () => {
+                    window.removeEventListener('click', close);
+                    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+                };
+            }, []);
+
+            return (
+                <>
+                    <p className={`text-lg font-medium mb-1 leading-relaxed transition-all duration-300 flex-1 ${isBlur ? 'blur-sm select-none opacity-50' : ''}`}>
+                        {words.map((w, i) => {
+                            const translation = getTranslation(w.clean, lessonId);
+                            const isClickable = !!translation;
+                            
+                            return (
+                                <span 
+                                    key={w.id}
+                                    onClick={(e) => handleWordClick(e, w.clean)}
+                                    className={`inline-block mr-1 rounded px-0.5 transition-colors relative group ${isClickable ? 'cursor-pointer hover:bg-yellow-200' : 'cursor-default'}`}
+                                    title={isClickable ? "点击查看翻译" : ""}
+                                >
+                                    {w.raw}
+                                </span>
+                            );
+                        })}
+                    </p>
+                    {selectedWord && (
+                        <div 
+                            className="fixed z-50 bg-black text-white text-sm px-3 py-1.5 rounded shadow-lg pointer-events-none transform -translate-x-1/2 -translate-y-full mt-[-8px]"
+                            style={{ left: selectedWord.x, top: selectedWord.y }}
+                        >
+                            <span className="font-bold text-yellow-300">{selectedWord.word}</span>: {selectedWord.translation}
+                            <div className="absolute bottom-[-6px] left-1/2 transform -translate-x-1/2 w-3 h-3 bg-black rotate-45"></div>
+                        </div>
+                    )}
+                </>
+            );
+        };
+
         const ReadingBoard = ({ currentLesson, playingIndex, setPlayingIndex, isPlaying, setIsPlaying, apiKey }) => {
             const [hoveredIndex, setHoveredIndex] = useState(null);
             const [isLoading, setIsLoading] = useState(false);
+            const [isUzbekHidden, setIsUzbekHidden] = useState(false);
+            const [manualVisibility, setManualVisibility] = useState({});
+
             const audioRef = useRef(new Audio());
             const synth = useRef(window.speechSynthesis);
             const audioCache = useRef({}); 
@@ -409,6 +959,7 @@
 
             useEffect(() => {
                 const audio = audioRef.current;
+                setManualVisibility({});
                 return () => {
                     audio.pause();
                     audio.currentTime = 0;
@@ -421,7 +972,6 @@
                 synth.current.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.rate = 0.9; 
-                // Try to find a related voice
                 const voices = synth.current.getVoices();
                 const voice = voices.find(v => v.lang.includes('uz')) || voices.find(v => v.lang.includes('tr'));
                 if (voice) utterance.voice = voice;
@@ -442,7 +992,6 @@
                 const requestId = Date.now();
                 currentRequestRef.current = requestId;
                 
-                // Check cache first
                 if (audioCache.current[text]) {
                     playAudioUrl(audioCache.current[text], index, onEnded);
                     return;
@@ -459,7 +1008,6 @@
                     audioCache.current[text] = audioUrl;
                     playAudioUrl(audioUrl, index, onEnded);
                 } else {
-                    // Fallback to browser TTS if API fails
                     setIsLoading(false);
                     speakBrowser(text, index, onEnded);
                 }
@@ -480,7 +1028,6 @@
             };
 
             const speak = (text, index, onEnded = null) => {
-                // Stop any current audio
                 audioRef.current.pause();
                 synth.current.cancel();
 
@@ -517,6 +1064,17 @@
                 playNext();
             };
 
+            const toggleSentenceVisibility = (e, index) => {
+                e.stopPropagation();
+                setManualVisibility(prev => {
+                    const currentVal = prev[index];
+                    if (currentVal === undefined) {
+                        return { ...prev, [index]: isUzbekHidden }; 
+                    }
+                    return { ...prev, [index]: !currentVal };
+                });
+            };
+
             return (
                 <div className="relative w-full max-w-4xl mx-auto bg-white rounded-xl shadow-2xl overflow-hidden border-4 border-blue-900">
                     <div className="w-full h-24 bg-blue-900 relative flex items-center justify-between px-6">
@@ -524,62 +1082,99 @@
                             <h2 className="text-2xl font-bold">{currentLesson.title}</h2>
                             <p className="text-blue-200 text-sm">{currentLesson.titleCn}</p>
                         </div>
-                        <button 
-                            onClick={playAll}
-                            disabled={isLoading && playingIndex === null}
-                            className="z-10 bg-yellow-500 hover:bg-yellow-400 text-blue-900 rounded-full p-3 shadow-lg transition-transform transform hover:scale-105 disabled:opacity-50 flex items-center justify-center"
-                        >
-                            {isPlaying && playingIndex !== null ? <Pause fill="currentColor" /> : <Play fill="currentColor" />}
-                        </button>
+                        <div className="flex gap-3 items-center">
+                            <button 
+                                onClick={() => {
+                                    setIsUzbekHidden(!isUzbekHidden);
+                                    setManualVisibility({}); 
+                                }}
+                                className="z-10 bg-white/20 hover:bg-white/30 text-white rounded-full p-2 transition-colors"
+                                title={isUzbekHidden ? "显示所有乌兹别克语" : "隐藏所有乌兹别克语（练习模式）"}
+                            >
+                                {isUzbekHidden ? <Eye size={20} /> : <EyeOff size={20} />}
+                            </button>
+                            <button 
+                                onClick={playAll}
+                                disabled={isLoading && playingIndex === null}
+                                className="z-10 bg-yellow-500 hover:bg-yellow-400 text-blue-900 rounded-full p-3 shadow-lg transition-transform transform hover:scale-105 disabled:opacity-50 flex items-center justify-center"
+                            >
+                                {isPlaying && playingIndex !== null ? <Pause fill="currentColor" /> : <Play fill="currentColor" />}
+                            </button>
+                        </div>
                     </div>
 
                     <div className="p-6 bg-slate-50 min-h-[500px] relative">
                         <div className="relative z-10 grid gap-4">
-                            {currentLesson.content.map((item, idx) => (
-                                <div 
-                                    key={idx}
-                                    className={`
-                                        group relative p-4 rounded-lg border-l-4 transition-all duration-300 cursor-pointer shadow-sm
-                                        ${playingIndex === idx 
-                                            ? 'bg-blue-100 border-blue-600 scale-[1.02] shadow-md' 
-                                            : 'bg-white border-gray-300 hover:border-blue-400 hover:shadow-md'
-                                        }
-                                    `}
-                                    onClick={() => speak(item.uz, idx)}
-                                    onMouseEnter={() => setHoveredIndex(idx)}
-                                    onMouseLeave={() => setHoveredIndex(null)}
-                                >
-                                    <div className="flex items-start gap-4">
-                                        <div className={`mt-1 p-2 rounded-full ${playingIndex === idx ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-400 group-hover:text-blue-500'}`}>
-                                            {playingIndex === idx && isLoading ? (
-                                                <Loader2 size={16} className="animate-spin" />
-                                            ) : playingIndex === idx ? (
-                                                <Volume2 size={16} className="animate-pulse" />
-                                            ) : (
-                                                <Volume2 size={16} />
-                                            )}
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className={`text-lg font-medium mb-1 leading-relaxed ${playingIndex === idx ? 'text-blue-900' : 'text-gray-800'}`}>
-                                                {item.uz}
-                                            </p>
-                                            <div className={`
-                                                overflow-hidden transition-all duration-500 ease-in-out
-                                                ${hoveredIndex === idx || playingIndex === idx ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'}
-                                            `}>
-                                                <p className="text-gray-600 text-sm mt-2 border-t pt-2 border-gray-100 flex items-center gap-2">
-                                                    <Globe size={12} />
-                                                    {item.cn}
-                                                </p>
+                            {currentLesson.content.map((item, idx) => {
+                                const manualState = manualVisibility[idx];
+                                const isHiddenByLogic = manualState !== undefined ? !manualState : isUzbekHidden;
+                                const isInteracting = playingIndex === idx || hoveredIndex === idx;
+                                const isBlur = isHiddenByLogic && !isInteracting;
+                                const showCn = hoveredIndex === idx || playingIndex === idx || isUzbekHidden;
+
+                                return (
+                                    <div 
+                                        key={idx}
+                                        className={`
+                                            group relative p-4 rounded-lg border-l-4 transition-all duration-300 cursor-pointer shadow-sm
+                                            ${playingIndex === idx 
+                                                ? 'bg-blue-100 border-blue-600 scale-[1.02] shadow-md' 
+                                                : 'bg-white border-gray-300 hover:border-blue-400 hover:shadow-md'
+                                            }
+                                        `}
+                                        onClick={() => speak(item.uz, idx)}
+                                        onMouseEnter={() => setHoveredIndex(idx)}
+                                        onMouseLeave={() => setHoveredIndex(null)}
+                                    >
+                                        <div className="flex items-start gap-4">
+                                            <div className={`mt-1 p-2 rounded-full ${playingIndex === idx ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-400 group-hover:text-blue-500'}`}>
+                                                {playingIndex === idx && isLoading ? (
+                                                    <Loader2 size={16} className="animate-spin" />
+                                                ) : playingIndex === idx ? (
+                                                    <Volume2 size={16} className="animate-pulse" />
+                                                ) : (
+                                                    <Volume2 size={16} />
+                                                )}
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="flex justify-between items-start">
+                                                    <div className={playingIndex === idx ? 'text-blue-900' : 'text-gray-800'}>
+                                                        <InteractiveSentence 
+                                                            text={item.uz} 
+                                                            isBlur={isBlur} 
+                                                            idx={idx}
+                                                            speak={speak}
+                                                            lessonId={currentLesson.id}
+                                                        />
+                                                    </div>
+                                                    <button 
+                                                        onClick={(e) => toggleSentenceVisibility(e, idx)}
+                                                        className="ml-2 text-gray-400 hover:text-blue-600 p-1 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0"
+                                                        title={isBlur ? "显示此句" : "隐藏此句"}
+                                                    >
+                                                        {isBlur ? <EyeOff size={16} /> : <Eye size={16} />}
+                                                    </button>
+                                                </div>
+                                                <div className={`
+                                                    overflow-hidden transition-all duration-500 ease-in-out
+                                                    ${showCn ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'}
+                                                `}>
+                                                    <p className="text-gray-600 text-sm mt-2 border-t pt-2 border-gray-100 flex items-center gap-2">
+                                                        <Globe size={12} />
+                                                        {item.cn}
+                                                    </p>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                     <div className="bg-gray-100 p-4 text-center text-gray-500 text-xs border-t">
-                        {apiKey ? "已启用真人AI语音 (Gemini)" : "当前使用浏览器默认语音，配置 API Key 可获得更好体验"}
+                        {isUzbekHidden 
+                            ? "练习模式：查看中文，回想乌兹别克语。点击单词可查看释义。" 
+                            : apiKey ? "已启用真人AI语音 (Gemini) • 点击单词查看释义" : "配置 API Key 可获得更好体验 • 点击单词查看释义"}
                     </div>
                 </div>
             );
@@ -658,7 +1253,7 @@
                                 <button onClick={() => setSidebarOpen(true)} className="md:hidden text-gray-600">
                                     <Menu />
                                 </button>
-                                <h1 className="font-bold text-gray-800 hidden md:block">乌兹别克语教程</h1>
+                                <h1 className="font-bold text-gray-800 hidden md:block">乌兹别克语阅读</h1>
                             </div>
                             <button 
                                 onClick={() => setIsSettingsOpen(true)}
@@ -675,9 +1270,9 @@
                         <main className="flex-1 overflow-y-auto p-4 md:p-8 relative">
                             <div className="max-w-4xl mx-auto space-y-6">
                                 <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl p-6 text-white shadow-lg mb-8">
-                                    <h1 className="text-3xl font-bold mb-2">Salom! (你好!)</h1>
-                                    <p className="opacity-90">
-                                        请选择左侧的课程开始阅读练习。本应用专注于《乌兹别克语教程》第7-18课。
+                                    <h1 className="text-3xl font-bold mb-2">乌兹别克语阅读</h1>
+                                    <p className="opacity-90 text-sm">
+                                        交互式学习助手 | Dilfuza老师 | 小红书号：410803917
                                     </p>
                                 </div>
 
